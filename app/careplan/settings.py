@@ -35,6 +35,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'careplan.wsgi.application'
 
-DATABASES = {}
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'careplan'),
+        'USER': os.environ.get('DB_USER', 'careplan'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'careplan'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+    }
+}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

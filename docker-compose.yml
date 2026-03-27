@@ -1,4 +1,15 @@
 services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: careplan
+      POSTGRES_USER: careplan
+      POSTGRES_PASSWORD: careplan
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   web:
     build: .
     ports:
@@ -7,3 +18,8 @@ services:
       - .env
     volumes:
       - ./app:/app
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
