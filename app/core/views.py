@@ -3,6 +3,8 @@ import uuid
 
 from django.shortcuts import render, redirect
 from openai import OpenAI
+from django.http import JsonResponse
+
 
 # In-memory store. Resets when the container restarts.
 care_plans = {}
@@ -83,3 +85,14 @@ Output exactly 4 sections with these headings:
 def result_view(request, plan_id):
     data = care_plans[plan_id]
     return render(request, 'result.html', {'data': data})
+
+
+def care_plan_api(request, plan_id):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    if plan_id not in care_plans:
+        return JsonResponse({'error': 'Care plan not found'}, status=404)
+    
+    care_plan = care_plans[plan_id]
+    return JsonResponse(care_plan, status=200)
