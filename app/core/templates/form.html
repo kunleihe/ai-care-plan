@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>New Care Plan</title>
+  <style>
+    body { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; }
+    label { display: block; margin-top: 16px; font-weight: bold; font-size: 14px; }
+    input, textarea { width: 100%; box-sizing: border-box; padding: 8px; margin-top: 4px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
+    textarea { height: 80px; resize: vertical; }
+    button { margin-top: 24px; padding: 10px 24px; background: #1a56db; color: white; border: none; border-radius: 4px; font-size: 15px; cursor: pointer; }
+    button:hover { background: #1648c0; }
+    .hint { font-size: 12px; color: #666; margin-top: 2px; }
+    h1 { font-size: 22px; }
+  </style>
+</head>
+<body>
+  <h1>Generate Care Plan</h1>
+  <form method="post">
+    {% csrf_token %}
+
+    <label for="first_name">Patient First Name</label>
+    <input type="text" id="first_name" name="first_name" required>
+
+    <label for="last_name">Patient Last Name</label>
+    <input type="text" id="last_name" name="last_name" required>
+
+    <label for="mrn">Patient MRN</label>
+    <input type="text" id="mrn" name="mrn" required>
+
+    <label for="dob">Date of Birth</label>
+    <input type="date" id="dob" name="dob" required>
+
+    <label for="referring_provider">Referring Provider</label>
+    <input type="text" id="referring_provider" name="referring_provider" required>
+
+    <label for="primary_diagnosis">Primary Diagnosis (ICD-10)</label>
+    <input type="text" id="primary_diagnosis" name="primary_diagnosis" placeholder="e.g. M05.79" required>
+
+    <label for="medication_name">Medication Name</label>
+    <input type="text" id="medication_name" name="medication_name" required>
+
+    <label for="additional_notes">Additional Notes <span style="font-weight:normal">(optional)</span></label>
+    <textarea id="additional_notes" name="additional_notes" placeholder="Medication history, allergies, other diagnoses..."></textarea>
+
+    <p class="hint">Generating the care plan may take 10–20 seconds.</p>
+    <button type="submit">Generate Care Plan</button>
+  </form>
+</body>
+</html>

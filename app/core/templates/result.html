@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Care Plan — {{ data.patient.first_name }} {{ data.patient.last_name }}</title>
+  <style>
+    body { font-family: sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; }
+    h1 { font-size: 22px; }
+    .meta { background: #f5f5f5; border-radius: 6px; padding: 16px; margin-bottom: 24px; font-size: 14px; line-height: 1.8; }
+    .meta strong { display: inline-block; width: 160px; }
+    pre { white-space: pre-wrap; font-family: sans-serif; font-size: 14px; line-height: 1.7; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 20px; }
+    a { color: #1a56db; font-size: 14px; }
+    h2 { font-size: 16px; margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <h1>Care Plan</h1>
+
+  <div class="meta">
+    <strong>Patient:</strong> {{ data.patient.first_name }} {{ data.patient.last_name }}<br>
+    <strong>MRN:</strong> {{ data.patient.mrn }}<br>
+    <strong>Date of Birth:</strong> {{ data.patient.dob }}<br>
+    <strong>Referring Provider:</strong> {{ data.patient.referring_provider }}<br>
+    <strong>Primary Diagnosis:</strong> {{ data.patient.primary_diagnosis }}<br>
+    <strong>Medication:</strong> {{ data.patient.medication_name }}<br>
+  </div>
+
+  <h2>Generated Care Plan</h2>
+  <pre>{{ data.care_plan_text }}</pre>
+
+  <p><a href="{% url 'form' %}">← Generate another care plan</a></p>
+</body>
+</html>
