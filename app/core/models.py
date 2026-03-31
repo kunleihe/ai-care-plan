@@ -12,17 +12,17 @@ class Patient(models.Model):
 
 
 class Provider(models.Model):
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
     npi = models.CharField(max_length=10, unique=True)
 
     def __str__(self):
-        return f"Dr. {self.first_name} {self.last_name} (NPI: {self.npi})"
+        return f"{self.name} (NPI: {self.npi})"
 
 
 class Order(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='orders')
-    provider = models.ForeignKey(Provider, on_delete=models.CASCADE, related_name='orders')
+    provider = models.ForeignKey(Provider, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
+    referring_provider_name = models.CharField(max_length=200, blank=True)
     medication = models.CharField(max_length=200)
     diagnosis = models.CharField(max_length=20)  # ICD-10 code
     medical_notes = models.TextField(blank=True)

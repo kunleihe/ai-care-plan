@@ -10,6 +10,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
   web:
     build: .
     ports:
@@ -20,6 +25,7 @@ services:
       - ./app:/app
     depends_on:
       - db
+      - redis
 
 volumes:
   postgres_data:
