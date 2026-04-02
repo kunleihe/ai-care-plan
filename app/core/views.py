@@ -1,8 +1,55 @@
+import json
+
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.csrf import csrf_exempt
 
 from .models import CarePlan, Order, Patient, Provider
 from .tasks import generate_care_plan
+
+
+@csrf_exempt
+def order_api(request):
+    """React 前端用的 JSON POST 接口"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    patient, _ = Patient.objects.get_or_create(
+        mrn=data['mrn'],
+        defaults={
+            'first_name': data['first_name'],
+            'last_name': data['last_name'],
+            'dob': data['dob'],
+        },
+    )
+
+    provider, _ = Provider.objects.get_or_create(
+        npi=data['referring_provider_npi'],
+        defaults={'name': data['referring_provider']},
+    )
+
+    order = Order.objects.create(
+        patient=patient,
+        provider=provider,
+        referring_provider_name=data['referring_provider'],
+        medication=data['medication_name'],
+        diagnosis=data['primary_diagnosis'],
+        medical_notes=data.get('additional_notes', ''),
+    )
+
+    care_plan = CarePlan.objects.create(
+        order=order,
+        status=CarePlan.Status.PENDING,
+    )
+
+    generate_care_plan.delay(care_plan.id)
+
+    return JsonResponse({'care_plan_id': care_plan.id}, status=201)
 
 
 def form_view(request):
