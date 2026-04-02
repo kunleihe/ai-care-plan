@@ -1,15 +1,8 @@
-import os
-
-import redis
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 
 from .models import CarePlan, Order, Patient, Provider
-
-redis_client = redis.Redis.from_url(
-    os.environ.get('REDIS_URL', 'redis://redis:6379/0'),
-    decode_responses=True,
-)
+from .tasks import generate_care_plan
 
 
 def form_view(request):
@@ -43,8 +36,8 @@ def form_view(request):
             status=CarePlan.Status.PENDING,
         )
 
-        # Push care plan ID to Redis queue for async processing
-        redis_client.rpush('care_plan_queue', str(care_plan.id))
+        # 派发 Celery 异步任务
+        generate_care_plan.delay(care_plan.id)
 
         return redirect('result', plan_id=care_plan.id)
 

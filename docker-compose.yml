@@ -27,5 +27,16 @@ services:
       - db
       - redis
 
+  worker:
+    build: .
+    command: celery -A careplan worker --loglevel=info
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app
+    depends_on:
+      - db
+      - redis
+
 volumes:
   postgres_data:
