@@ -1,20 +1,22 @@
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useCreateOrder } from '@/hooks/useOrders'
 import { FormField } from '@/components/forms/FormField'
 import { Button } from '@/components/ui/Button'
-import type { OrderCreateData } from '@/types'
+import type { CarePlanStatus, OrderCreateData } from '@/types'
 
 export function NewOrderPage() {
-  const navigate = useNavigate()
   const createOrder = useCreateOrder()
+  const [submittedPlan, setSubmittedPlan] = useState<{ id: number; status: CarePlanStatus } | null>(null)
 
-  const { register, handleSubmit, formState: { errors } } = useForm<OrderCreateData>()
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<OrderCreateData>()
 
   const onSubmit = (data: OrderCreateData) => {
     createOrder.mutate(data, {
       onSuccess: (result) => {
-        navigate(`/care-plans/${result.care_plan_id}`)
+        setSubmittedPlan({ id: result.care_plan_id, status: result.status })
+        reset()
       },
     })
   }
@@ -22,6 +24,21 @@ export function NewOrderPage() {
   return (
     <div className="max-w-2xl">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Generate Care Plan</h1>
+
+      {submittedPlan && (
+        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+          <p className="font-medium">Order submitted successfully.</p>
+          <p className="mt-1">
+            Care Plan #{submittedPlan.id} has been added to the queue with status <span className="font-semibold">{submittedPlan.status}</span>.
+          </p>
+          <p className="mt-2">
+            <Link to="/dashboard" className="text-blue-600 hover:underline">
+              Open dashboard
+            </Link>
+            {' '}to monitor progress while you continue entering orders.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-lg shadow p-6 space-y-4">
         <div className="grid grid-cols-2 gap-4">

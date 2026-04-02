@@ -19,3 +19,7 @@ export function getStatusColor(status: CarePlanStatus) {
       return 'bg-red-100 text-red-800'
   }
 }
+
+export function formatDateTime(value: string) {
+  return new Date(value).toLocaleString()
+}

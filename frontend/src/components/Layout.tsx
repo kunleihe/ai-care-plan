@@ -18,6 +18,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
           >
             New Order
           </Link>
+          <Link
+            to="/dashboard"
+            className={cn(
+              'text-sm',
+              location.pathname === '/dashboard' ? 'text-blue-600 font-medium' : 'text-gray-500 hover:text-gray-700'
+            )}
+          >
+            Dashboard
+          </Link>
         </div>
       </nav>
       <main className="max-w-4xl mx-auto px-4 py-8">

@@ -79,7 +79,7 @@ export function CarePlanPage() {
         {data.status === 'failed' && (
           <div className="flex items-center gap-2 text-red-600">
             <AlertCircle className="h-5 w-5" />
-            <span className="text-sm">Generation failed. Please try again.</span>
+            <span className="text-sm">{data.error ?? 'Generation failed. Please try again.'}</span>
           </div>
         )}
 

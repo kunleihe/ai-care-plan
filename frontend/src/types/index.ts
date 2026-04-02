@@ -16,6 +16,38 @@ export interface CarePlan {
   }
 }
 
+export interface CarePlanStatusResponse extends Pick<CarePlan, 'id' | 'status' | 'content' | 'patient' | 'order'> {
+  error?: string
+}
+
+export interface CarePlanListItem {
+  id: number
+  status: CarePlanStatus
+  patient_name: string
+  mrn: string
+  medication: string
+  diagnosis: string
+  created_at: string
+  error?: string
+}
+
+export interface PaginatedCarePlansResponse {
+  count: number
+  next: number | null
+  previous: number | null
+  results: CarePlanListItem[]
+}
+
+export interface CarePlanBatchStatusItem {
+  id: number
+  status: CarePlanStatus
+  error?: string
+}
+
+export interface CarePlanBatchStatusResponse {
+  results: CarePlanBatchStatusItem[]
+}
+
 export interface OrderCreateData {
   first_name: string
   last_name: string
@@ -30,4 +62,5 @@ export interface OrderCreateData {
 
 export interface OrderCreateResponse {
   care_plan_id: number
+  status: CarePlanStatus
 }

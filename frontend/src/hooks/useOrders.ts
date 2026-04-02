@@ -1,10 +1,22 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { carePlanService, orderService } from '@/services/orderService'
 import type { OrderCreateData } from '@/types'
 
 export function useCreateOrder() {
+  const queryClient = useQueryClient()
+
   return useMutation({
     mutationFn: (data: OrderCreateData) => orderService.createOrder(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['carePlans'] })
+    },
+  })
+}
+
+export function useCarePlans(page: number, pageSize: number) {
+  return useQuery({
+    queryKey: ['carePlans', page, pageSize],
+    queryFn: () => carePlanService.getCarePlans(page, pageSize),
   })
 }
 
@@ -14,9 +26,10 @@ export function useCreateOrder() {
  */
 export function useCarePlanStatus(planId: string | number) {
   return useQuery({
-    queryKey: ['carePlan', planId],
+    queryKey: ['carePlanStatus', planId],
     queryFn: () => carePlanService.getStatus(planId),
     enabled: !!planId,
+    refetchIntervalInBackground: true,
     refetchInterval: (query) => {
       const status = query.state.data?.status
       if (status === 'pending' || status === 'processing') {
