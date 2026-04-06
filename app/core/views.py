@@ -3,6 +3,7 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
+from .exceptions import ValidationError
 from .models import CarePlan
 from . import serializers, services
 
@@ -16,9 +17,10 @@ def order_api(request):
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        raise ValidationError('Request body must be valid JSON.')
 
-    care_plan = services.create_order(data)
+    confirm = bool(data.get('confirm', False))
+    care_plan = services.create_order(data, confirm=confirm)
     return JsonResponse({'care_plan_id': care_plan.id, 'status': care_plan.status}, status=201)
 
 

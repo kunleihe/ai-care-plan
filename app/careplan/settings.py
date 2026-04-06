@@ -16,6 +16,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'core.middleware.AppExceptionMiddleware',
 ]
 
 ROOT_URLCONF = 'careplan.urls'

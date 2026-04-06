@@ -1,0 +1,36 @@
+services:
+  db_test:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: careplan_test
+      POSTGRES_USER: careplan
+      POSTGRES_PASSWORD: careplan
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U careplan -d careplan_test"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  test:
+    build: .
+    # 安装测试依赖后运行 pytest，输出覆盖率报告
+    command: >-
+      sh -c "pip install -r /requirements-test.txt --quiet &&
+             python -m pytest core/tests/ -v --cov=core --cov-report=term-missing --cov-fail-under=80"
+    environment:
+      DB_HOST: db_test
+      DB_NAME: careplan_test
+      DB_USER: careplan
+      DB_PASSWORD: careplan
+      DB_PORT: "5432"
+      # Celery 被 mock，但 settings.py 需要这个变量不报错
+      REDIS_URL: redis://localhost:6379/0
+      # 避免 LLM 调用真实 API
+      USE_FAKE_LLM: "true"
+      DJANGO_SETTINGS_MODULE: careplan.settings
+    volumes:
+      # 挂载 requirements-test.txt 进容器（Dockerfile 没有 COPY 它）
+      - ./requirements-test.txt:/requirements-test.txt:ro
+    depends_on:
+      db_test:
+        condition: service_healthy

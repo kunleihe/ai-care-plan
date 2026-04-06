@@ -58,6 +58,7 @@ export interface OrderCreateData {
   primary_diagnosis: string
   medication_name: string
   additional_notes?: string
+  confirm?: boolean
 }
 
 export interface OrderCreateResponse {

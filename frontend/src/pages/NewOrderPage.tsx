@@ -1,24 +1,44 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useCreateOrder } from '@/hooks/useOrders'
 import { FormField } from '@/components/forms/FormField'
 import { Button } from '@/components/ui/Button'
-import type { CarePlanStatus, OrderCreateData } from '@/types'
+import { AppError } from '@/services/api'
+import { orderSchema, type OrderFormData } from '@/utils/validators'
+import type { CarePlanStatus } from '@/types'
 
 export function NewOrderPage() {
   const createOrder = useCreateOrder()
   const [submittedPlan, setSubmittedPlan] = useState<{ id: number; status: CarePlanStatus } | null>(null)
+  const [pendingData, setPendingData] = useState<OrderFormData | null>(null)
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<OrderCreateData>()
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<OrderFormData>({
+    resolver: zodResolver(orderSchema),
+  })
 
-  const onSubmit = (data: OrderCreateData) => {
+  const onSuccess = (result: { care_plan_id: number; status: CarePlanStatus }) => {
+    setSubmittedPlan({ id: result.care_plan_id, status: result.status })
+    setPendingData(null)
+    reset()
+  }
+
+  const onSubmit = (data: OrderFormData) => {
+    setPendingData(null)
     createOrder.mutate(data, {
-      onSuccess: (result) => {
-        setSubmittedPlan({ id: result.care_plan_id, status: result.status })
-        reset()
+      onSuccess,
+      onError: (error) => {
+        if (error instanceof AppError && error.requires_confirmation) {
+          setPendingData(data)
+        }
       },
     })
+  }
+
+  const onConfirm = () => {
+    if (!pendingData) return
+    createOrder.mutate({ ...pendingData, confirm: true }, { onSuccess })
   }
 
   return (
@@ -44,14 +64,14 @@ export function NewOrderPage() {
         <div className="grid grid-cols-2 gap-4">
           <FormField label="Patient First Name" required error={errors.first_name?.message}>
             <input
-              {...register('first_name', { required: 'Required' })}
+              {...register('first_name')}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </FormField>
 
           <FormField label="Patient Last Name" required error={errors.last_name?.message}>
             <input
-              {...register('last_name', { required: 'Required' })}
+              {...register('last_name')}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </FormField>
@@ -60,7 +80,7 @@ export function NewOrderPage() {
         <div className="grid grid-cols-2 gap-4">
           <FormField label="MRN" hint="6-digit patient ID" required error={errors.mrn?.message}>
             <input
-              {...register('mrn', { required: 'Required' })}
+              {...register('mrn')}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </FormField>
@@ -68,7 +88,7 @@ export function NewOrderPage() {
           <FormField label="Date of Birth" required error={errors.dob?.message}>
             <input
               type="date"
-              {...register('dob', { required: 'Required' })}
+              {...register('dob')}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </FormField>
@@ -77,14 +97,14 @@ export function NewOrderPage() {
         <div className="grid grid-cols-2 gap-4">
           <FormField label="Referring Provider" required error={errors.referring_provider?.message}>
             <input
-              {...register('referring_provider', { required: 'Required' })}
+              {...register('referring_provider')}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </FormField>
 
           <FormField label="Provider NPI" hint="10-digit NPI" required error={errors.referring_provider_npi?.message}>
             <input
-              {...register('referring_provider_npi', { required: 'Required' })}
+              {...register('referring_provider_npi')}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </FormField>
@@ -92,7 +112,7 @@ export function NewOrderPage() {
 
         <FormField label="Primary Diagnosis (ICD-10)" hint="e.g. M05.79" required error={errors.primary_diagnosis?.message}>
           <input
-            {...register('primary_diagnosis', { required: 'Required' })}
+            {...register('primary_diagnosis')}
             placeholder="e.g. M05.79"
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -100,7 +120,7 @@ export function NewOrderPage() {
 
         <FormField label="Medication Name" required error={errors.medication_name?.message}>
           <input
-            {...register('medication_name', { required: 'Required' })}
+            {...register('medication_name')}
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </FormField>
@@ -113,8 +133,27 @@ export function NewOrderPage() {
           />
         </FormField>
 
-        {createOrder.error && (
-          <p className="text-sm text-red-600">{createOrder.error.message}</p>
+        {createOrder.error instanceof AppError && (
+          createOrder.error.requires_confirmation ? (
+            <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
+              <p className="font-medium">{createOrder.error.message}</p>
+              <ul className="mt-2 list-disc pl-4 space-y-1">
+                {createOrder.error.warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+              <Button
+                type="button"
+                onClick={onConfirm}
+                disabled={createOrder.isPending}
+                className="mt-3"
+              >
+                Confirm and Submit
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-red-600">{createOrder.error.message}</p>
+          )
         )}
 
         <Button type="submit" disabled={createOrder.isPending} className="w-full justify-center py-2.5">
