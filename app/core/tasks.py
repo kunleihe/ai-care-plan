@@ -1,8 +1,8 @@
 import os
 
 from celery import shared_task
-from openai import OpenAI
 
+from .llm import get_llm_service
 from .models import CarePlan
 
 
@@ -79,13 +79,9 @@ def generate_care_plan(self, care_plan_id: int):
         if os.environ.get('USE_FAKE_LLM', '').lower() == 'true':
             content = _fake_llm_response(care_plan)
         else:
-            client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
-            response = client.chat.completions.create(
-                model='gpt-4o-mini',
-                messages=[{'role': 'user', 'content': _build_prompt(care_plan)}],
-                temperature=0.3,
-            )
-            content = response.choices[0].message.content
+            prompt = _build_prompt(care_plan)
+            llm_service = get_llm_service()
+            content = llm_service.generate_text(prompt)
     except Exception as exc:
         # 指数退避：10s → 20s → 40s
         countdown = 10 * (2 ** self.request.retries)

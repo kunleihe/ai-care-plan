@@ -2,8 +2,8 @@ import os
 
 import redis
 from django.core.management.base import BaseCommand
-from openai import OpenAI
 
+from core.llm import get_llm_service
 from core.models import CarePlan
 
 
@@ -11,8 +11,6 @@ redis_client = redis.Redis.from_url(
     os.environ.get('REDIS_URL', 'redis://redis:6379/0'),
     decode_responses=True,
 )
-
-openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
 QUEUE_NAME = 'care_plan_queue'
 
@@ -52,12 +50,8 @@ def process_care_plan(care_plan_id: str):
     # Step 2: call LLM
     try:
         prompt = build_prompt(care_plan)
-        response = openai_client.chat.completions.create(
-            model='gpt-4o-mini',
-            messages=[{'role': 'user', 'content': prompt}],
-            temperature=0.3,
-        )
-        content = response.choices[0].message.content
+        llm_service = get_llm_service()
+        content = llm_service.generate_text(prompt)
     except Exception as e:
         print(f"[worker] LLM call failed for care plan {care_plan_id}: {type(e).__name__}")
         care_plan.status = CarePlan.Status.FAILED
