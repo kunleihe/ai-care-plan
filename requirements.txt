@@ -1,4 +1,5 @@
 django>=4.2,<5.0
+django-prometheus>=2.3
 openai>=1.0
 python-dotenv>=1.0
 psycopg2-binary>=2.9

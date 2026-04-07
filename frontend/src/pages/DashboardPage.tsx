@@ -23,6 +23,7 @@ export function DashboardPage() {
     () => items.filter((item) => item.status === 'pending' || item.status === 'processing').map((item) => item.id),
     [items]
   )
+  const activeIdsKey = useMemo(() => activeIds.join(','), [activeIds])
 
   useEffect(() => {
     if (activeIds.length === 0) {
@@ -57,7 +58,7 @@ export function DashboardPage() {
       cancelled = true
       window.clearInterval(intervalId)
     }
-  }, [activeIds])
+  }, [activeIdsKey])
 
   const totalPages = data ? Math.max(1, Math.ceil(data.count / PAGE_SIZE)) : 1
   const counts = useMemo(
