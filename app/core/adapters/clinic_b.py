@@ -1,6 +1,5 @@
 import json
 import logging
-import re
 from datetime import datetime
 from typing import Any
 
@@ -79,28 +78,6 @@ class ClinicBAdapter(BaseIntakeAdapter):
             medical_notes=self._build_notes(parsed),
             source=self.SOURCE,
         )
-
-    def validate(self, order: InternalOrder) -> None:
-        if not re.fullmatch(r"\d{10}", order.provider.npi):
-            raise ValidationError(
-                f"[ClinicB] NPI must be exactly 10 digits, got: '{order.provider.npi}'"
-            )
-
-        if not re.fullmatch(r"\d{6}", order.patient.mrn):
-            raise ValidationError(
-                f"[ClinicB] MRN must be exactly 6 digits, got: '{order.patient.mrn}'"
-            )
-
-        if not re.fullmatch(r"[A-Z]\d{2}(\.\d{1,4})?", order.diagnosis, re.IGNORECASE):
-            raise ValidationError(
-                f"[ClinicB] Invalid ICD-10 code: '{order.diagnosis}'"
-            )
-
-        if not order.patient.first_name or not order.patient.last_name:
-            raise ValidationError("[ClinicB] Patient first name and last name are required.")
-
-        if not order.medication:
-            raise ValidationError("[ClinicB] Medication name is required.")
 
     # ── private helpers ───────────────────────────────────────────────────────
 

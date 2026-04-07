@@ -1,34 +1,33 @@
-import re
-
 from django.core.paginator import EmptyPage, Paginator
 from django.utils import timezone
 
+from .adapters import get_adapter
 from .exceptions import (
     DuplicateOrderError,
     DuplicateOrderWarning,
     DuplicateProviderError,
     PatientDataMismatchWarning,
-    ValidationError,
 )
+from .internal_types import InternalOrder
 from .models import CarePlan, Order, Patient, Provider
 from .tasks import generate_care_plan
 
 
-def create_order(data: dict, confirm: bool = False) -> CarePlan:
-    npi = data.get('referring_provider_npi', '')
-    provider_name = data.get('referring_provider', '')
-    mrn = data.get('mrn', '')
-    diagnosis = data.get('primary_diagnosis', '')
+def create_order(
+    data: dict,
+    *,
+    source: str = 'manual_form',
+    confirm: bool = False,
+) -> CarePlan:
+    adapter = get_adapter(source)
+    internal_order = adapter.process(data)
+    return create_order_from_internal(internal_order, confirm=confirm)
 
-    # --- 格式验证（后端最终防线，前端 Zod 绕过也拦得住）---
-    if not re.fullmatch(r'\d{10}', npi):
-        raise ValidationError('NPI must be exactly 10 digits.')
 
-    if not re.fullmatch(r'\d{6}', mrn):
-        raise ValidationError('MRN must be exactly 6 digits.')
-
-    if not re.fullmatch(r'[A-Z]\d{2}(\.\d{1,4})?', diagnosis, re.IGNORECASE):
-        raise ValidationError('Primary diagnosis must be a valid ICD-10 code (e.g. M05.79, I10).')
+def create_order_from_internal(order_data: InternalOrder, confirm: bool = False) -> CarePlan:
+    npi = order_data.provider.npi
+    provider_name = order_data.provider.name
+    mrn = order_data.patient.mrn
 
     # --- Provider duplicate detection ---
     existing_provider = Provider.objects.filter(npi=npi).first()
@@ -43,9 +42,9 @@ def create_order(data: dict, confirm: bool = False) -> CarePlan:
         provider = Provider.objects.create(npi=npi, name=provider_name)
 
     # --- Patient duplicate detection ---
-    first_name = data.get('first_name', '')
-    last_name = data.get('last_name', '')
-    dob = data.get('dob', '')
+    first_name = order_data.patient.first_name
+    last_name = order_data.patient.last_name
+    dob = order_data.patient.dob
 
     existing_by_mrn = Patient.objects.filter(mrn=mrn).first()
     existing_by_name_dob = Patient.objects.filter(
@@ -79,7 +78,7 @@ def create_order(data: dict, confirm: bool = False) -> CarePlan:
         )
 
     # --- Order duplicate detection ---
-    medication = data.get('medication_name', '')
+    medication = order_data.medication
     today = timezone.now().date()
 
     same_day_order = Order.objects.filter(
@@ -110,8 +109,8 @@ def create_order(data: dict, confirm: bool = False) -> CarePlan:
         provider=provider,
         referring_provider_name=provider_name,
         medication=medication,
-        diagnosis=data['primary_diagnosis'],
-        medical_notes=data.get('additional_notes', ''),
+        diagnosis=order_data.diagnosis,
+        medical_notes=order_data.medical_notes,
     )
     care_plan = CarePlan.objects.create(
         order=order,

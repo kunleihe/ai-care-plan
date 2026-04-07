@@ -1,6 +1,8 @@
+import re
 from abc import ABC, abstractmethod
 from typing import Any
 
+from core.exceptions import ValidationError
 from core.internal_types import InternalOrder
 
 
@@ -28,14 +30,37 @@ class BaseIntakeAdapter(ABC):
         """
         ...
 
-    @abstractmethod
     def validate(self, order: InternalOrder) -> None:
         """
-        验证转换后的数据是否符合业务规则。
+        默认执行所有 adapter 共用的业务规则验证。
+        子类如果有来源特有规则，可以 override 这个方法并在里面先调 super().
         不合法时 raise ValidationError，不返回 bool。
         不修改 order 本身。
         """
-        ...
+        label = self._source_label()
+
+        if not re.fullmatch(r"\d{10}", order.provider.npi):
+            raise ValidationError(
+                f"[{label}] NPI must be exactly 10 digits, got: '{order.provider.npi}'"
+            )
+
+        if not re.fullmatch(r"\d{6}", order.patient.mrn):
+            raise ValidationError(
+                f"[{label}] MRN must be exactly 6 digits, got: '{order.patient.mrn}'"
+            )
+
+        if not re.fullmatch(r"[A-Z]\d{2}(\.\d{1,4})?", order.diagnosis, re.IGNORECASE):
+            raise ValidationError(
+                f"[{label}] Invalid ICD-10 code: '{order.diagnosis}'"
+            )
+
+        if not order.patient.first_name or not order.patient.last_name:
+            raise ValidationError(
+                f"[{label}] Patient first name and last name are required."
+            )
+
+        if not order.medication:
+            raise ValidationError(f"[{label}] Medication name is required.")
 
     def process(self, raw: Any) -> InternalOrder:
         """
@@ -46,3 +71,9 @@ class BaseIntakeAdapter(ABC):
         order = self.transform(parsed)
         self.validate(order)
         return order
+
+    def _source_label(self) -> str:
+        source = getattr(self, "SOURCE", "")
+        if not isinstance(source, str) or not source.strip():
+            return self.__class__.__name__
+        return source

@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     # JSON API（React 前端用）
     path('api/orders/', views.order_api, name='order_api'),
+    path('api/orders/<str:source>/', views.order_api, name='order_api_with_source'),
     path('api/careplans/', views.care_plan_list_api, name='care_plan_list_api'),
     path('api/careplans/statuses/', views.care_plan_batch_status_api, name='care_plan_batch_status_api'),
     path('api/careplan/<int:plan_id>/status/', views.care_plan_status_api, name='care_plan_status_api'),

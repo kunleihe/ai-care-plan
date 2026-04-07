@@ -9,7 +9,7 @@ from . import serializers, services
 
 
 @csrf_exempt
-def order_api(request):
+def order_api(request, source: str = 'manual_form'):
     """React 前端用的 JSON POST 接口"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -20,7 +20,7 @@ def order_api(request):
         raise ValidationError('Request body must be valid JSON.')
 
     confirm = bool(data.get('confirm', False))
-    care_plan = services.create_order(data, confirm=confirm)
+    care_plan = services.create_order(data, source=source, confirm=confirm)
     return JsonResponse({'care_plan_id': care_plan.id, 'status': care_plan.status}, status=201)
 
 

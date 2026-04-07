@@ -329,3 +329,38 @@ class TestHappyPath(TestCase):
 
         # Celery task 被异步 dispatch 了（而不是同步执行）
         mock_task.delay.assert_called_once_with(care_plan.id)
+
+    @patch(TASK_PATH)
+    def test_create_order_uses_adapter_pipeline_for_northhill_source(self, mock_task):
+        payload = {
+            'source': 'northhill_hospital',
+            'member_id': '654321',
+            'given_name': 'John',
+            'family_name': 'Carter',
+            'birth_date': '1985-07-14',
+            'ordering_physician': 'Dr. Adams',
+            'ordering_physician_npi': '9876543210',
+            'primary_dx_code': 'E11.9',
+            'drug': 'Ozempic',
+            'chart_summary': 'Type 2 diabetes. A1c elevated.',
+        }
+
+        care_plan = services.create_order(payload, source='northhill_hospital')
+
+        self.assertEqual(care_plan.status, CarePlan.Status.PENDING)
+        self.assertEqual(Provider.objects.count(), 1)
+        self.assertEqual(Patient.objects.count(), 1)
+        self.assertEqual(Order.objects.count(), 1)
+
+        order = Order.objects.first()
+        self.assertEqual(order.referring_provider_name, 'Dr. Adams')
+        self.assertEqual(order.medication, 'Ozempic')
+        self.assertEqual(order.diagnosis, 'E11.9')
+        self.assertEqual(order.medical_notes, 'Type 2 diabetes. A1c elevated.')
+
+        patient = Patient.objects.first()
+        self.assertEqual(patient.mrn, '654321')
+        self.assertEqual(patient.first_name, 'John')
+        self.assertEqual(patient.last_name, 'Carter')
+
+        mock_task.delay.assert_called_once_with(care_plan.id)

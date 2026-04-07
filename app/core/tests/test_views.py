@@ -7,7 +7,7 @@ Integration tests for HTTP API endpoints (core/views.py)
 - @patch mock 掉 Celery task，不需要 Redis 也能跑
 
 覆盖范围：
-  - POST /api/orders/ 的各种错误 + 成功路径
+  - POST /api/orders/ 和 /api/orders/<source>/ 的各种错误 + 成功路径
   - GET /api/care-plans/<id>/ 的 404 / 200
   - GET /api/careplans/ 的分页 + 错误参数
   - 方法限制（405）
@@ -50,6 +50,7 @@ class TestOrderApi(TestCase):
     def setUp(self):
         self.client = Client()
         self.url = '/api/orders/'
+        self.northhill_url = '/api/orders/northhill_hospital/'
 
     # ── HTTP 方法限制 ─────────────────────────────────────────────────────────
 
@@ -173,6 +174,32 @@ class TestOrderApi(TestCase):
         response = post_json(self.client, self.url, payload)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(Order.objects.count(), 2)
+
+    @patch(TASK_PATH)
+    def test_source_route_uses_adapter_without_source_in_payload(self, mock_task):
+        payload = {
+            'member_id': '654321',
+            'given_name': 'John',
+            'family_name': 'Carter',
+            'birth_date': '1985-07-14',
+            'ordering_physician': 'Dr. Adams',
+            'ordering_physician_npi': '9876543210',
+            'primary_dx_code': 'E11.9',
+            'drug': 'Ozempic',
+            'chart_summary': 'Type 2 diabetes. A1c elevated.',
+        }
+
+        response = post_json(self.client, self.northhill_url, payload)
+        self.assertEqual(response.status_code, 201)
+
+        body = json.loads(response.content)
+        self.assertIn('care_plan_id', body)
+        self.assertEqual(body['status'], 'pending')
+        self.assertEqual(Order.objects.count(), 1)
+
+        order = Order.objects.first()
+        self.assertEqual(order.referring_provider_name, 'Dr. Adams')
+        self.assertEqual(order.medication, 'Ozempic')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
