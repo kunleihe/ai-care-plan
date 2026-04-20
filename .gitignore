@@ -39,6 +39,13 @@ dist/
 .ruff_cache/
 *.log
 
+# AWS Lambda deployment packages (third-party deps bundled for Lambda)
+aws/package/
+aws/package*/
+aws/.deps/
+aws/.pkg_*/
+aws/*.zip
+
 # Database
 *.sqlite
 *.sqlite3
