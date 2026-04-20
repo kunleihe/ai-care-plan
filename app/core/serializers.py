@@ -1,4 +1,4 @@
-from .models import CarePlan
+from .models import CarePlan, Order
 
 
 def serialize_care_plan_full(care_plan: CarePlan) -> dict:
@@ -55,6 +55,30 @@ def serialize_care_plan_list_item(care_plan: CarePlan) -> dict:
         'medication': order.medication,
         'diagnosis': order.diagnosis,
         'created_at': care_plan.created_at.isoformat(),
+    }
+
+
+def serialize_order_full(order: Order) -> dict:
+    patient = order.patient
+    care_plan = getattr(order, 'care_plan', None)
+    return {
+        'id': order.id,
+        'medication': order.medication,
+        'diagnosis': order.diagnosis,
+        'referring_provider': order.referring_provider_name,
+        'medical_notes': order.medical_notes,
+        'created_at': order.created_at.isoformat(),
+        'patient': {
+            'first_name': patient.first_name,
+            'last_name': patient.last_name,
+            'mrn': patient.mrn,
+            'dob': str(patient.dob),
+        },
+        'care_plan': {
+            'id': care_plan.id,
+            'status': care_plan.status,
+            'content': care_plan.content if care_plan.status == CarePlan.Status.COMPLETED else None,
+        } if care_plan else None,
     }
 
 

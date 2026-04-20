@@ -10,7 +10,6 @@ from .exceptions import (
 )
 from .internal_types import InternalOrder
 from .models import CarePlan, Order, Patient, Provider
-from .tasks import generate_care_plan
 
 
 def create_order(
@@ -18,13 +17,14 @@ def create_order(
     *,
     source: str = 'manual_form',
     confirm: bool = False,
+    enqueue: bool = True,
 ) -> CarePlan:
     adapter = get_adapter(source)
     internal_order = adapter.process(data)
-    return create_order_from_internal(internal_order, confirm=confirm)
+    return create_order_from_internal(internal_order, confirm=confirm, enqueue=enqueue)
 
 
-def create_order_from_internal(order_data: InternalOrder, confirm: bool = False) -> CarePlan:
+def create_order_from_internal(order_data: InternalOrder, confirm: bool = False, enqueue: bool = True) -> CarePlan:
     npi = order_data.provider.npi
     provider_name = order_data.provider.name
     mrn = order_data.patient.mrn
@@ -116,7 +116,9 @@ def create_order_from_internal(order_data: InternalOrder, confirm: bool = False)
         order=order,
         status=CarePlan.Status.PENDING,
     )
-    generate_care_plan.delay(care_plan.id)
+    if enqueue:
+        from .tasks import generate_care_plan
+        generate_care_plan.delay(care_plan.id)
     return care_plan
 
 
@@ -139,3 +141,7 @@ def get_care_plan_page(page: int, page_size: int):
 def get_batch_statuses(ids: list) -> dict:
     care_plans = CarePlan.objects.filter(pk__in=ids)
     return {cp.id: cp for cp in care_plans}
+
+
+def get_order(order_id: int) -> Order:
+    return Order.objects.select_related('patient', 'provider', 'care_plan').get(pk=order_id)
