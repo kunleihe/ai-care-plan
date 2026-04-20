@@ -44,11 +44,13 @@ build_lambda() {
 
 build_lambda "create_order" "create_order_lambda.py"
 build_lambda "get_order" "get_order_lambda.py"
+build_lambda "process_care_plan" "process_care_plan_lambda.py"
 
 rm -rf "$DEPS_DIR"
 
 echo ""
 echo "✓ 全部打包完成"
 echo "  Lambda Handler 填写："
-echo "    create_order_lambda.zip → create_order_lambda.handler"
-echo "    get_order_lambda.zip    → get_order_lambda.handler"
+echo "    create_order_lambda.zip      → create_order_lambda.handler"
+echo "    get_order_lambda.zip         → get_order_lambda.handler"
+echo "    process_care_plan_lambda.zip → process_care_plan_lambda.handler"
