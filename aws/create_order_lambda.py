@@ -19,9 +19,22 @@ from core.exceptions import (
     ValidationError,
     WarningException,
 )
+from core.queue import BaseQueue
 
-_sqs = boto3.client('sqs', region_name=os.environ.get('AWS_REGION', 'us-east-1'))
-_QUEUE_URL = os.environ['SQS_QUEUE_URL']
+
+class SQSQueue(BaseQueue):
+    def __init__(self, queue_url: str):
+        self.queue_url = queue_url
+        self._client = boto3.client('sqs', region_name=os.environ.get('AWS_REGION', 'us-east-1'))
+
+    def enqueue(self, care_plan_id: int) -> None:
+        self._client.send_message(
+            QueueUrl=self.queue_url,
+            MessageBody=json.dumps({'care_plan_id': care_plan_id}),
+        )
+
+
+_queue = SQSQueue(queue_url=os.environ['SQS_QUEUE_URL'])
 
 
 def _ok(body: dict, status: int = 200) -> dict:
@@ -56,18 +69,16 @@ def handler(event, context):
     source = body.pop('source', 'manual_form')
 
     try:
-        care_plan = services.create_order(body, source=source, confirm=confirm, enqueue=False)
+        care_plan = services.create_order(body, source=source, confirm=confirm, queue=_queue)
     except ValidationError as e:
         return _err(e.message, 400)
     except BlockError as e:
-        # DuplicateProviderError / DuplicateOrderError — 不可跳过
         return {
             'statusCode': 409,
             'headers': {'Content-Type': 'application/json'},
             'body': json.dumps(e.to_response_dict()),
         }
     except WarningException as e:
-        # DuplicateOrderWarning / PatientDataMismatchWarning — 需要前端 confirm
         return {
             'statusCode': 409,
             'headers': {'Content-Type': 'application/json'},
@@ -75,10 +86,5 @@ def handler(event, context):
         }
     except Exception:
         return _err('Internal server error', 500)
-
-    _sqs.send_message(
-        QueueUrl=_QUEUE_URL,
-        MessageBody=json.dumps({'care_plan_id': care_plan.id}),
-    )
 
     return _ok({'care_plan_id': care_plan.id, 'status': care_plan.status}, 201)

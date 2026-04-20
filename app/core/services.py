@@ -10,6 +10,7 @@ from .exceptions import (
 )
 from .internal_types import InternalOrder
 from .models import CarePlan, Order, Patient, Provider
+from .queue import BaseQueue, CeleryQueue
 
 
 def create_order(
@@ -17,14 +18,14 @@ def create_order(
     *,
     source: str = 'manual_form',
     confirm: bool = False,
-    enqueue: bool = True,
+    queue: BaseQueue | None = None,
 ) -> CarePlan:
     adapter = get_adapter(source)
     internal_order = adapter.process(data)
-    return create_order_from_internal(internal_order, confirm=confirm, enqueue=enqueue)
+    return create_order_from_internal(internal_order, confirm=confirm, queue=queue)
 
 
-def create_order_from_internal(order_data: InternalOrder, confirm: bool = False, enqueue: bool = True) -> CarePlan:
+def create_order_from_internal(order_data: InternalOrder, confirm: bool = False, queue: BaseQueue | None = None) -> CarePlan:
     npi = order_data.provider.npi
     provider_name = order_data.provider.name
     mrn = order_data.patient.mrn
@@ -116,9 +117,8 @@ def create_order_from_internal(order_data: InternalOrder, confirm: bool = False,
         order=order,
         status=CarePlan.Status.PENDING,
     )
-    if enqueue:
-        from .tasks import generate_care_plan
-        generate_care_plan.delay(care_plan.id)
+    resolved_queue = queue if queue is not None else CeleryQueue()
+    resolved_queue.enqueue(care_plan.id)
     return care_plan
 
 
