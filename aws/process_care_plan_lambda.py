@@ -92,8 +92,12 @@ def handler(event, context):
     """
     SQS 触发：批量处理消息。
     每条消息 body = {"care_plan_id": <int>}
+
+    使用 Partial Batch Response：只有失败的消息才会被重试，
+    成功的消息不会因为同批次有失败而被重复处理。
+    前提：Lambda Trigger 需开启 "Report batch item failures"。
     """
-    errors = []
+    batch_item_failures = []
 
     for record in event['Records']:
         try:
@@ -102,8 +106,7 @@ def handler(event, context):
             _process_one(care_plan_id)
         except Exception as e:
             print(f'[sqs-worker] failed on record {record.get("messageId")}: {e}')
-            errors.append(record['messageId'])
+            # 只把失败的消息 ID 返回，SQS 只重试这些
+            batch_item_failures.append({'itemIdentifier': record['messageId']})
 
-    # Day 14 会用 Partial Batch Response 优化，只重试失败的那条
-    if errors:
-        raise RuntimeError(f'Failed to process {len(errors)} record(s): {errors}')
+    return {'batchItemFailures': batch_item_failures}
