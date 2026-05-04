@@ -1,4 +1,5 @@
 from django.core.paginator import EmptyPage, Paginator
+from django.db.models import Q
 from django.utils import timezone
 
 from .adapters import get_adapter
@@ -126,16 +127,26 @@ def get_care_plan(plan_id: int) -> CarePlan:
     return CarePlan.objects.select_related('order__patient').get(pk=plan_id)
 
 
-def get_care_plan_page(page: int, page_size: int):
-    """Returns (paginator, page_obj). page_obj is None if page is out of range."""
+def get_care_plan_page(page: int, page_size: int, status: str = None, patient_name: str = None):
+    """Returns (paginator, page_obj, page_size). page_obj is None if page is out of range."""
     page_size = min(max(page_size, 1), 100)
     queryset = CarePlan.objects.select_related('order__patient').order_by('-created_at')
+
+    if status:
+        queryset = queryset.filter(status=status)
+
+    if patient_name:
+        queryset = queryset.filter(
+            Q(order__patient__first_name__icontains=patient_name)
+            | Q(order__patient__last_name__icontains=patient_name)
+        )
+
     paginator = Paginator(queryset, page_size)
     try:
         page_obj = paginator.page(page)
-        return paginator, page_obj
+        return paginator, page_obj, page_size
     except EmptyPage:
-        return paginator, None
+        return paginator, None, page_size
 
 
 def get_batch_statuses(ids: list) -> dict:

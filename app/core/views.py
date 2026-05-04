@@ -63,21 +63,32 @@ def care_plan_list_api(request):
     except (TypeError, ValueError):
         return JsonResponse({'error': 'Invalid page_size'}, status=400)
 
-    paginator, page_obj = services.get_care_plan_page(page, page_size)
+    status = request.GET.get('status')
+    if status and status not in CarePlan.Status.values:
+        return JsonResponse(
+            {'error': f'Invalid status. Must be one of: {list(CarePlan.Status.values)}'},
+            status=400,
+        )
+
+    patient_name = request.GET.get('patient_name', '').strip() or None
+
+    paginator, page_obj, effective_page_size = services.get_care_plan_page(
+        page, page_size, status=status, patient_name=patient_name,
+    )
 
     if page_obj is None:
         return JsonResponse({
             'count': paginator.count,
-            'next': None,
-            'previous': None,
+            'page': page,
+            'page_size': effective_page_size,
             'results': [],
         })
 
     results = [serializers.serialize_care_plan_list_item(cp) for cp in page_obj.object_list]
     return JsonResponse({
         'count': paginator.count,
-        'next': page + 1 if page_obj.has_next() else None,
-        'previous': page - 1 if page_obj.has_previous() else None,
+        'page': page,
+        'page_size': effective_page_size,
         'results': results,
     })
 
