@@ -85,6 +85,9 @@ def handler(event, context):
             'body': json.dumps(e.to_response_dict()),
         }
     except Exception:
+        import traceback
+        print('=== UNHANDLED ERROR ===')
+        print(traceback.format_exc())
         return _err('Internal server error', 500)
 
     return _ok({'care_plan_id': care_plan.id, 'status': care_plan.status}, 201)
